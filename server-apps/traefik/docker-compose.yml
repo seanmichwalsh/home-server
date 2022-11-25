@@ -1,0 +1,58 @@
+version: "3.7"
+services:
+
+  traefik:
+    container_name: traefik
+    image: traefik:latest
+    restart: always
+    command:
+      --log.level=DEBUG
+      --log.filePath=/logs/traefik.log
+      --log.format=json
+
+      --accesslog.filepath=/logs/access.log
+      --accesslog.format=json
+
+      --entrypoints.http.address=:80
+      --entrypoints.https.address=:443
+
+      --providers.docker=true
+      --providers.docker.exposedbydefault=false
+
+      --api=true
+
+      --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=http
+      --certificatesresolvers.letsencrypt.acme.email=${ADMIN_EMAIL}
+      --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    labels:
+      - traefik.enable=true
+            
+      - traefik.http.routers.traefik-http.rule=Host(`${TRAEFIK_DOMAIN}`)
+      - traefik.http.routers.traefik-http.entrypoints=http
+      - traefik.http.routers.traefik-http.middlewares=redirect
+
+      - traefik.http.routers.traefik-https.rule=Host(`${TRAEFIK_DOMAIN}`)
+      - traefik.http.routers.traefik-https.entrypoints=https
+      - traefik.http.routers.traefik-https.middlewares=auth
+      - traefik.http.routers.traefik-https.service=api@internal
+      - traefik.http.routers.traefik-https.tls=true
+      - traefik.http.routers.traefik-https.tls.certresolver=letsencrypt
+
+      - traefik.http.middlewares.redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.auth.basicauth.users=${ADMIN_USERNAME}:${ADMIN_PASSWORD}
+    ports:
+      - 80:80
+      - 443:443
+    networks:
+      - proxy
+    volumes:
+      - ./data/logs/traefik.log:/logs/traefik.log
+      - ./data/logs/access.log:/logs/access.log
+      - ./data/letsencrypt/acme.json:/letsencrypt/acme.json
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+networks:
+  proxy:
+    external:
+      name: proxy

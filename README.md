@@ -5,3 +5,11 @@ One of my hobbies is managing my own home server of self-hosted open source appl
 
 
 This repository serves to document my specific configuration files for individual applications. Private configuration data has been redacted as env variables.
+
+## Applications
+
+### Traefik
+[Traefik](https://doc.traefik.io/traefik/) is the reverse-proxy for my server. It works as the frontline service clients interface with, directing them to the appropriate application. Its benefit over the popular Apache HTTPd web server it its ability to detect and synchronize various application configuration files (including Docker files).
+
+**Containers:**
+- `traefik`
