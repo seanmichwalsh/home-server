@@ -21,3 +21,9 @@ This repository serves to document my specific configuration files for individua
 - `nextcloud-db` - Persistent MariaDB instance
 - `nextcloud-redis` - Persistent caching service
 - `nextcloud-app` - Nextcloud server
+
+## Jellyfin
+[Jellyfin](https://jellyfin.org/docs/) is a home media server, working like an open source version of Plex for streaming your personal movies, TV shows, music, etc.
+
+**Containers:**
+- `jellyfin` - Jellyfin media server
