@@ -1,0 +1,73 @@
+version: '3.7'
+
+services:
+  nextcloud-db:
+    image: mariadb:latest
+    container_name: nextcloud-db
+    command: --transaction-isolation=READ-COMMITTED --binlog-format=ROW
+    restart: always
+    volumes:
+      - ./data/db:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+    networks:
+      - nextcloud_backend
+    logging:
+      options:
+        max-size: '12m'
+        max-file: '5'
+      driver: json-file
+
+  redis:
+    image: redis:alpine
+    container_name: nextcloud-redis
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    networks:
+      - nextcloud_backend
+
+  nextcloud-app:
+    image: nextcloud:latest
+    container_name: nextcloud-app
+    restart: always
+    volumes:
+      - ./data/nextcloud/config:/var/www/html/config
+      - ./data/nextcloud/html:/var/www/html
+      - ./data/nextcloud/data:/var/www/html/data
+      - ./data/nextcloud/apps:/var/www/html/apps
+    environment:
+      - NEXTCLOUD_DATA_DIR=/var/www/html/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.port=80"
+      - "traefik.http.routers.cloud.entrypoints=https"
+      - "traefik.http.routers.cloud.rule=Host(`${NEXTCLOUD_DOMAIN}`)"
+      - "traefik.http.routers.cloud.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cloud.middlewares=cloud,nc-dav"
+      - "traefik.docker.network=proxy"
+      - "traefik.http.middlewares.cloud.headers.customFrameOptionsValue=SAMEORIGIN"
+      - "traefik.http.middlewares.cloud.headers.framedeny=true"
+      - "traefik.http.middlewares.cloud.headers.sslredirect=true"
+      - "traefik.http.middlewares.cloud.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.cloud.headers.stsPreload=true"
+      - "traefik.http.middlewares.cloud.headers.stsSeconds=15552000"
+      - "traefik.http.middlewares.nc-dav.redirectregex.regex=https://(.*)/.well-known/(card|cal)dav"
+      - "traefik.http.middlewares.nc-dav.redirectregex.replacement=https://$$1/remote.php/dav/"
+      - "traefik.http.middlewares.nc-dav.redirectregex.permanent=true"
+    networks:
+      - proxy
+      - nextcloud_backend
+    logging:
+      options:
+        max-size: '12m'
+        max-file: '5'
+      driver: json-file
+
+networks:
+  proxy:
+    external:
+      name: proxy
+  nextcloud_backend:
